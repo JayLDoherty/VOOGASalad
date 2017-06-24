@@ -1,0 +1,387 @@
+package authoring.components;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import javafx.beans.binding.StringBinding;
+import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.control.Accordion;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import polyglot.Case;
+import polyglot.Polyglot;
+import utils.views.View;
+import javafx.stage.FileChooser.ExtensionFilter;
+
+/**
+ * 
+ * A class that creates default GUI components. Currently, the class can create
+ * the following items: file choosers, directory choosers, text input dialogs,
+ * alerts, accordions, buttons, and tab buttons.
+ * 
+ * @author Elliott Bolzan
+ *
+ */
+public class ComponentMaker {
+
+	private Polyglot polyglot;
+	private ResourceBundle IOResources;
+	private ResourceBundle combinations;
+	private String stylesheetPath;
+
+	/**
+	 * Returns a Factory.
+	 * 
+	 * @param polyglot
+	 *            the polyglot for this ComponentMaker.
+	 * @param IOresources
+	 *            the ResourceBundle that the Factory makes use of.
+	 */
+	public ComponentMaker(Polyglot polyglot, ResourceBundle IOResources) {
+		this.polyglot = polyglot;
+		this.IOResources = IOResources;
+		this.combinations = ResourceBundle.getBundle(IOResources.getString("CombinationsPath"));
+		this.stylesheetPath = IOResources.getString("StylesheetPath");
+	}
+
+	/**
+	 * @param path
+	 *            the default path for the FileChooser.
+	 * @param extensionName
+	 *            the name of the type of file being picked.
+	 * @param types
+	 *            the types of file that can be picked.
+	 * @return a FileChooser.
+	 */
+	public FileChooser makeFileChooser(String path, String extensionName, String... types) {
+		FileChooser chooser = new FileChooser();
+		chooser.setInitialDirectory(new File(path));
+		chooser.getExtensionFilters().setAll(new ExtensionFilter(extensionName, types));
+		return chooser;
+	}
+
+	/**
+	 * @param path
+	 *            the default path for the DirectoryChooser.
+	 * @param titleProperty
+	 *            the property that provides the title for the chooser.
+	 * @return a DirectoryChooser.
+	 */
+	public DirectoryChooser makeDirectoryChooser(String path, String titleProperty) {
+		DirectoryChooser chooser = new DirectoryChooser();
+		chooser.titleProperty().bind(polyglot.get(titleProperty));
+		chooser.setInitialDirectory(new File(path));
+		return chooser;
+	}
+
+	/**
+	 * @param titleProperty
+	 *            the property that provides the title for the dialog.
+	 * @param headerProperty
+	 *            the property that provides the header for the dialog.
+	 * @param contentProperty
+	 *            the property that provides the content for the dialog.
+	 * @param placeholderProperty
+	 *            the property that provides a placeholder for the dialog.
+	 * @return a TextInputDialog.
+	 */
+	public TextInputDialog makeTextInputDialog(String titleProperty, String headerProperty, String promptProperty,
+			String content) {
+		TextInputDialog dialog = new TextInputDialog(content);
+		dialog.titleProperty().bind(polyglot.get(titleProperty, Case.TITLE));
+		dialog.headerTextProperty().bind(polyglot.get(headerProperty));
+		dialog.contentTextProperty().bind(polyglot.get(promptProperty));
+		return dialog;
+	}
+
+	/**
+	 * @param type
+	 *            the type of Alert that needs to be created.
+	 * @param titleProperty
+	 *            the property that provides the title for the Alert.
+	 * @param headerProperty
+	 *            the property that provides the header for the Alert.
+	 * @param content
+	 *            the property that provides the content for the Alert.
+	 * @return the Alert.
+	 */
+	public Alert makeAlert(AlertType type, String titleProperty, String headerProperty, String content) {
+		Alert alert = alertHelper(type, titleProperty, headerProperty);
+		alert.setContentText(content);
+		return alert;
+	}
+
+	/**
+	 * @param type
+	 *            the type of Alert that needs to be created.
+	 * @param titleProperty
+	 *            the property that provides the title for the Alert.
+	 * @param headerProperty
+	 *            the property that provides the header for the Alert.
+	 * @param content
+	 *            a StringBinding that provides the content for the Alert.
+	 * @return the Alert.
+	 */
+	public Alert makeAlert(AlertType type, String titleProperty, String headerProperty, StringBinding content) {
+		Alert alert = alertHelper(type, titleProperty, headerProperty);
+		alert.contentTextProperty().bind(content);
+		return alert;
+	}
+
+	/**
+	 * @param type
+	 *            the type of Alert that needs to be created.
+	 * @param titleProperty
+	 *            the property that provides the title for the Alert.
+	 * @param headerProperty
+	 *            the property that provides the header for the Alert.
+	 * @return the Alert.
+	 */
+	private Alert alertHelper(AlertType type, String titleProperty, String headerProperty) {
+		Alert alert = new Alert(type);
+		alert.titleProperty().bind(polyglot.get(titleProperty, Case.TITLE));
+		alert.headerTextProperty().bind(polyglot.get(headerProperty));
+		DialogPane dialogPane = alert.getDialogPane();
+		dialogPane.getStylesheets().add(stylesheetPath);
+		return alert;
+	}
+
+	/**
+	 * @param subviews
+	 *            the subviews that are to be added to the Accordion.
+	 * @param nameList
+	 *            the tooltip values for these panels.
+	 * @return an Accordion.
+	 */
+	public Accordion makeAccordion(List<View> subviews, List<StringBinding> nameList) {
+		Accordion accordion = new Accordion();
+		List<TitledPane> titledPanes = new ArrayList<TitledPane>();
+		for (int i = 0; i < subviews.size(); i++) {
+			TitledPane pane = new TitledPane();
+			pane.textProperty().bind(subviews.get(i).getTitle());
+			pane.setContent(subviews.get(i));
+			Label info = new Label("?");
+			new CustomTooltip(nameList.get(i), info);
+			pane.setGraphic(info);
+			info.translateXProperty().bind(pane.widthProperty().subtract(info.widthProperty().multiply(6)));
+			titledPanes.add(pane);
+		}
+		accordion.getPanes().addAll(titledPanes);
+		accordion.setExpandedPane(titledPanes.get(0));
+		return accordion;
+	}
+
+	/**
+	 * @param property
+	 *            the property that provides the title of the Button.
+	 * @param handler
+	 *            the handler executed when the button is clicked.
+	 * @param fill
+	 *            whether the button should fill its available space.
+	 * @return a Button.
+	 */
+	public Button makeButton(String property, EventHandler<ActionEvent> handler, boolean fill) {
+		Button button = new Button();
+		button.textProperty().bind(polyglot.get(property, Case.TITLE));
+		button.setOnAction(handler);
+		if (fill) {
+			HBox.setHgrow(button, Priority.ALWAYS);
+			button.setMaxWidth(Double.MAX_VALUE);
+		}
+		return button;
+	}
+
+	/**
+	 * @param path
+	 *            the path to the image for the tab button.
+	 * @param action
+	 *            the action to be executed when the tab button is clicked.
+	 * @param style
+	 *            the class of the tab button in the CSS stylesheet.
+	 * @param width
+	 *            the width of the Button.
+	 * @param height
+	 *            the height of the Button.
+	 * @return the tab button.
+	 */
+	public Button makeTabButton(String path, EventHandler<ActionEvent> action, String style, int width, int height) {
+		ImageView imageView = new ImageView(
+				new Image(getClass().getClassLoader().getResourceAsStream(path), width, height, true, true));
+		Button button = new Button("", imageView);
+		button.setOnAction(action);
+		button.getStyleClass().add(style);
+		return button;
+	}
+
+	/**
+	 * @param property
+	 *            the property that provides the title of the Button.
+	 * @param handler
+	 *            the handler executed when the button is clicked.
+	 * @param fill
+	 *            whether the button should fill its available space.
+	 * @return a Button.
+	 */
+	public Button makeImageButton(String property, ImageView image, EventHandler<ActionEvent> handler, boolean fill) {
+		Button button = new Button();
+		button.textProperty().bind(polyglot.get(property));
+		button.setGraphic(image);
+		button.setOnAction(handler);
+		if (fill) {
+			HBox.setHgrow(button, Priority.ALWAYS);
+			button.setMaxWidth(Double.MAX_VALUE);
+		}
+		return button;
+	}
+
+	/**
+	 * 
+	 * Displays a View as a Stage.
+	 * 
+	 * @param titleProperty
+	 *            the title for the Stage.
+	 * @param width
+	 *            the width for the Stage.
+	 * @param height
+	 *            the height for the Stage.
+	 * @param view
+	 *            the view to show.
+	 * @param modality
+	 *            the Modality for the Stage.
+	 * @param center
+	 *            whether the Stage is centered.
+	 * @return
+	 */
+	public Stage display(String titleProperty, double width, double height, View view, Modality modality,
+			boolean center) {
+		Stage stage = new Stage();
+		stage.initModality(modality);
+		stage.titleProperty().bind(polyglot.get(titleProperty, Case.TITLE));
+		Scene scene = new Scene(view, width, height);
+		scene.getStylesheets().add(stylesheetPath);
+		stage.setScene(scene);
+		stage.show();
+		scene.setFill(null);
+		if (center) {
+			stage.centerOnScreen();
+		}
+		return stage;
+	}
+
+	/**
+	 * Creates a menu.
+	 * 
+	 * @param titleProperty
+	 *            the title for the Menu.
+	 * @return a Menu.
+	 */
+	public Menu makeMenu(String titleProperty) {
+		Menu menu = new Menu();
+		menu.textProperty().bind(polyglot.get(titleProperty, Case.TITLE));
+		return menu;
+	}
+
+	/**
+	 * Makes a menu item.
+	 * 
+	 * @param property
+	 *            the value of the text.
+	 * @param handler
+	 *            the handler to be called on click.
+	 * @param showAccelerator
+	 *            whether a key combination should be showed.
+	 * @return a MenuItem.
+	 */
+	public MenuItem makeMenuItem(String property, EventHandler<ActionEvent> handler, boolean showAccelerator) {
+		if (showAccelerator) {
+			return new TextMenuItem(polyglot.get(property + "MenuItem", Case.TITLE), combinations.getString(property),
+					handler);
+		}
+		return new TextMenuItem(polyglot.get(property + "MenuItem", Case.TITLE), handler);
+	}
+
+	/**
+	 * Makes a check menu item.
+	 * 
+	 * @param property
+	 *            the value of the text.
+	 * @param handler
+	 *            the handler to be called on click.
+	 * @param selected
+	 *            whether the MenuItem is selected by default.
+	 * @return a CheckMenuItem.
+	 */
+	public CheckMenuItem makeCheckItem(String property, EventHandler<ActionEvent> handler, boolean selected) {
+		CheckMenuItem item = new CheckMenuItem();
+		item.setOnAction(handler);
+		item.setSelected(selected);
+		item.textProperty().bind(polyglot.get(property + "MenuItem", Case.TITLE));
+		return item;
+	}
+
+	/**
+	 * 
+	 * Thread an operation and show a ProgressDialog to the user.
+	 * 
+	 * @param task
+	 *            the task to be run.
+	 * @param showResult
+	 *            whether the result should be shown.
+	 * 
+	 */
+	public void showProgressForTask(Task<Void> task, boolean showResult) {
+		ProgressDialog dialog = new ProgressDialog(polyglot, IOResources);
+		task.setOnSucceeded(event -> {
+			dialog.getDialogStage().close();
+			if (showResult) {
+				showSuccess();
+			}
+		});
+		task.setOnFailed(event -> {
+			dialog.getDialogStage().close();
+			if (showResult) {
+				showFailure();
+			}
+		});
+		Thread thread = new Thread(task);
+		thread.start();
+	}
+
+	/**
+	 * Show an Alert for successful tasks.
+	 */
+	public void showSuccess() {
+		Alert alert = makeAlert(AlertType.INFORMATION, "SuccessTitle", "SuccessHeader", polyglot.get("TaskSucceeded"));
+		alert.show();
+	}
+
+	/**
+	 * Show an Alert for failed tasks.
+	 */
+	public void showFailure() {
+		Alert alert = makeAlert(AlertType.ERROR, "ErrorTitle", "ErrorHeader", polyglot.get("TaskFailed"));
+		alert.show();
+	}
+
+}
